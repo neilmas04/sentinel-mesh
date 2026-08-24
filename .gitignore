@@ -1,0 +1,16 @@
+# Secrets and local environments
+.env
+.env.*
+!.env.example
+venv/
+
+# Python and frontend build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+frontend/node_modules/
+frontend/dist/
+
+# Reproducible generated datasets and experiment output
+data/generated/
+artifacts/
