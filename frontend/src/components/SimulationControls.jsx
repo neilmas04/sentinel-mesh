@@ -3,7 +3,7 @@ import { runSimulationStep } from '../apiClient';
 import { Play, Activity, AlertTriangle, AlertOctagon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export default function SimulationControls() {
+export default function SimulationControls({ onSimulationComplete }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -11,6 +11,16 @@ export default function SimulationControls() {
     setLoading(true);
     try {
       const result = await runSimulationStep(scenario);
+
+      if (onSimulationComplete && result.merchant_id && result.as_of_timestamp) {
+        onSimulationComplete({
+          merchant_id: result.merchant_id,
+          as_of_timestamp: result.as_of_timestamp,
+          live_tx_id: result.transaction_id,
+          live_is_flagged: result.is_flagged
+        });
+      }
+
       if (result.case_id) {
         navigate(`/cases/${result.case_id}?scenario=${scenario}`);
       } else {

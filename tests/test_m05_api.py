@@ -113,3 +113,15 @@ def test_evaluation_endpoint(client):
     # but we just assert the keys exist and the response is correct without checking processing time)
     
     # 7. Endpoint works regardless of working directory: we used pathlib in main.py.
+
+def test_simulation_response_fields(client):
+    # Test that simulation step returns merchant_id and as_of_timestamp
+    response = client.post("/api/v1/simulation/step", json={"scenario": "NORMAL"})
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert "merchant_id" in data
+    assert data["merchant_id"] is not None
+    assert "as_of_timestamp" in data
+    assert data["as_of_timestamp"] is not None
+

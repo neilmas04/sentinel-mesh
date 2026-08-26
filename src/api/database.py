@@ -9,9 +9,8 @@ DB_PATH = "sentinel.db"
 def init_db():
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("DROP TABLE IF EXISTS risk_cases")
         cursor.execute("""
-            CREATE TABLE risk_cases (
+            CREATE TABLE IF NOT EXISTS risk_cases (
                 case_id TEXT PRIMARY KEY,
                 transaction_id TEXT NOT NULL,
                 as_of_timestamp TEXT NOT NULL,

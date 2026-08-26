@@ -40,3 +40,21 @@ export const runSimulationStep = async (scenario) => {
   if (!res.ok) throw new Error('Simulation step failed');
   return res.json();
 };
+
+export const fetchMerchantSpikes = async (merchantId = null, currentTime = null, liveTxId = null, liveIsFlagged = null) => {
+  let url = `${API_BASE}/merchant-spikes`;
+  const params = new URLSearchParams();
+  if (merchantId) params.append('merchant_id', merchantId);
+  if (currentTime) params.append('current_time', currentTime);
+  if (liveTxId) params.append('live_tx_id', liveTxId);
+  if (liveIsFlagged !== null) params.append('live_is_flagged', liveIsFlagged);
+
+  const queryString = params.toString();
+  if (queryString) {
+    url += `?${queryString}`;
+  }
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch merchant spikes');
+  return res.json();
+};

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, ShieldAlert, BarChart3, Activity } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
@@ -6,7 +6,7 @@ import CaseDetail from './pages/CaseDetail';
 import Evaluation from './pages/Evaluation';
 import SimulationControls from './components/SimulationControls';
 
-function Sidebar() {
+function Sidebar({ onSimulationComplete }) {
   const location = useLocation();
   const links = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -27,9 +27,8 @@ function Sidebar() {
             <Link
               key={link.path}
               to={link.path}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                active ? 'bg-brand-600/20 text-brand-500 font-medium' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
-              }`}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${active ? 'bg-brand-600/20 text-brand-500 font-medium' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+                }`}
             >
               <link.icon size={18} />
               {link.label}
@@ -38,21 +37,23 @@ function Sidebar() {
         })}
       </nav>
       <div className="p-4 border-t border-gray-700">
-        <SimulationControls />
+        <SimulationControls onSimulationComplete={onSimulationComplete} />
       </div>
     </aside>
   );
 }
 
 function App() {
+  const [liveSimulationContext, setLiveSimulationContext] = useState(null);
+
   return (
     <Router>
       <div className="flex min-h-screen bg-gray-900 text-gray-300">
-        <Sidebar />
+        <Sidebar onSimulationComplete={setLiveSimulationContext} />
         <main className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/cases" element={<Dashboard />} />
+            <Route path="/" element={<Dashboard liveSimulationContext={liveSimulationContext} />} />
+            <Route path="/cases" element={<Dashboard liveSimulationContext={liveSimulationContext} />} />
             <Route path="/cases/:caseId" element={<CaseDetail />} />
             <Route path="/evaluation" element={<Evaluation />} />
           </Routes>

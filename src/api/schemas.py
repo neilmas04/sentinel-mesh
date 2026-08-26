@@ -13,6 +13,9 @@ class ScoreResponse(BaseModel):
     model_version: str
     case_id: Optional[str] = None
     created_at: datetime
+    merchant_id: Optional[str] = None
+    as_of_timestamp: Optional[datetime] = None
+    is_flagged: Optional[bool] = None
 
 class HealthResponse(BaseModel):
     status: str
@@ -47,3 +50,16 @@ class InvestigationResponse(BaseModel):
     tool_trace: List[dict]
     recommended_next_step: Optional[str]
     failure_reason: Optional[str]
+
+class MerchantSpikeResponse(BaseModel):
+    merchant_id: str
+    timestamp: str
+    total_transactions: int
+    flagged_transactions: int
+    flagged_rate: float
+    baseline_mean: Optional[float]
+    baseline_std: Optional[float]
+    rate_multiplier: Optional[float]
+    spike_score: Optional[float]
+    severity: str
+    baseline_insufficient: bool

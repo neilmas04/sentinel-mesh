@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 print("MAIN LOADED KEY:", os.environ.get("GOOGLE_API_KEY")[:10] if os.environ.get("GOOGLE_API_KEY") else "MISSING")
 
-from src.api.schemas import ScoreRequest, ScoreResponse, RiskCaseSchema, InvestigationResponse
+from src.api.schemas import ScoreRequest, ScoreResponse, RiskCaseSchema, InvestigationResponse, MerchantSpikeResponse
 from src.api.database import init_db, update_investigation, get_all_cases, get_dashboard_summary
 from src.api.cases import generate_case_if_needed, retrieve_case
 from src.features.local_features import LocalFeatureExtractor
@@ -22,6 +22,7 @@ from src.features.temporal_features import TemporalFeatureExtractor
 from src.agent.tools import AgentTools
 from src.agent.investigator import RiskInvestigator
 from src.api.policy import PolicyEngine
+from src.features.merchant_spike import MerchantSpikeDetector
 
 # Global state
 app_state = {}
@@ -139,7 +140,10 @@ async def score_transaction(request: ScoreRequest):
         risk_level=risk_level,
         model_version=app_state["metadata"]["model_version"],
         case_id=case_id,
-        created_at=datetime.now(UTC)
+        created_at=datetime.now(UTC),
+        merchant_id=current_tx['merchant_id'],
+        as_of_timestamp=current_ts,
+        is_flagged=(risk_level in ["HIGH", "CRITICAL"])
     )
 
 @app.get("/api/v1/cases", response_model=List[RiskCaseSchema])
@@ -259,6 +263,67 @@ async def get_evaluation():
         return metrics
     except Exception as e:
         return {"error": f"Evaluation artifacts not found. {str(e)}"}
+
+def get_flagged_transactions() -> set:
+    if "flagged_tx_ids" in app_state:
+        return app_state["flagged_tx_ids"]
+        
+    print("Computing Candidate D predictions for all transactions to initialize spike detector...")
+    df_all = app_state["transactions"]
+    
+    # Extract features
+    ext_df = LocalFeatureExtractor().extract_features(df_all)
+    ext_df = NetworkFeatureExtractor().extract_features(ext_df)
+    ext_df = TemporalFeatureExtractor().extract_features(ext_df)
+    
+    features = app_state["metadata"]["features"]
+    X = ext_df[features]
+    
+    model = app_state["model"]
+    risk_scores = model.predict_proba(X)[:, 1]
+    
+    threshold = app_state["metadata"]["threshold"]
+    flagged_mask = risk_scores >= threshold
+    
+    flagged_tx_ids = set(ext_df[flagged_mask]['transaction_id'].tolist())
+    app_state["flagged_tx_ids"] = flagged_tx_ids
+    return flagged_tx_ids
+
+@app.get("/api/v1/merchant-spikes", response_model=List[MerchantSpikeResponse])
+async def get_merchant_spikes(
+    merchant_id: Optional[str] = None, 
+    current_time: Optional[str] = None,
+    live_tx_id: Optional[str] = None,
+    live_is_flagged: Optional[bool] = None
+):
+    df_all = app_state["transactions"]
+    
+    if current_time:
+        try:
+            eval_time = pd.to_datetime(current_time)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid current_time format: {str(e)}")
+    else:
+        eval_time = df_all['timestamp'].max()
+        
+    flagged_tx_ids = get_flagged_transactions()
+    detector = MerchantSpikeDetector(bucket_size='1h', lookback_window=6)
+    
+    live_observation = None
+    if live_tx_id and live_is_flagged is not None:
+        live_observation = {
+            "live_tx_id": live_tx_id,
+            "is_flagged": live_is_flagged
+        }
+    
+    results = []
+    merchants_to_eval = [merchant_id] if merchant_id else df_all['merchant_id'].unique()
+    
+    for m_id in merchants_to_eval:
+        res = detector.compute_spike(m_id, eval_time, df_all, flagged_tx_ids, live_observation)
+        results.append(MerchantSpikeResponse(**res))
+        
+    return results
 
 class SimulationStepRequest(BaseModel):
     scenario: str

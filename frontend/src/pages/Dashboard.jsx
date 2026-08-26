@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchDashboardSummary, fetchCases } from '../apiClient';
 import { ShieldAlert, Activity, DollarSign, Database } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import MerchantSpikePanel from '../components/MerchantSpikePanel';
 
 function StatCard({ title, value, icon: Icon, colorClass }) {
   return (
@@ -17,7 +18,7 @@ function StatCard({ title, value, icon: Icon, colorClass }) {
   );
 }
 
-export default function Dashboard() {
+export default function Dashboard({ liveSimulationContext }) {
   const [summary, setSummary] = useState(null);
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,8 @@ export default function Dashboard() {
         <StatCard title="Investigated" value={summary?.investigated_cases || 0} icon={Activity} colorClass="text-success-500" />
         <StatCard title="Exposure" value={`$${(summary?.estimated_exposure || 0).toFixed(2)}`} icon={DollarSign} colorClass="text-warning-500" />
       </div>
+
+      <MerchantSpikePanel liveSimulationContext={liveSimulationContext} />
 
       <div className="glass-panel overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-700 bg-gray-800/50">
