@@ -39,8 +39,8 @@ Campaign sizes, timings, merchants, accounts, devices, networks, and amounts
 are sampled from seeded distributions. The leakage checker rejects abuse
 campaigns with constant amounts or constant inter-event intervals.
 
-The default M01 artifact has 46,296 transactions: 23,160 train, 11,568
-validation, and 11,568 test. It contains 2,340 labelled abuse events and 45
+The default M01 artifact has 46,296 transactions: 22,432 train, 11,932
+validation, and 11,932 test. It contains 2,340 labelled abuse events and 45
 merchants, 2,700 accounts, 2,222 devices, and 1,106 network groups. Exact
 scenario counts are saved in `manifests/summary.json` rather than copied into
 application code.

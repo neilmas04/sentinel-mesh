@@ -1,1 +1,81 @@
 @import "tailwindcss";
+
+@theme {
+  --color-gray-900: #0f1115;
+  --color-gray-800: #161b22;
+  --color-gray-700: #21262d;
+  --color-gray-600: #30363d;
+  --color-gray-500: #484f58;
+  --color-gray-400: #8b949e;
+  --color-gray-300: #c9d1d9;
+  --color-gray-100: #f0f6fc;
+  
+  --color-brand-500: #58a6ff;
+  --color-brand-600: #1f6feb;
+  
+  --color-danger-500: #f85149;
+  --color-danger-900: rgba(248, 81, 73, 0.1);
+  
+  --color-warning-500: #d29922;
+  --color-warning-900: rgba(210, 153, 34, 0.1);
+
+  --color-success-500: #3fb950;
+  --color-success-900: rgba(63, 185, 80, 0.1);
+}
+
+@layer base {
+  body {
+    @apply bg-gray-900 text-gray-300 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-gray-800/80 backdrop-blur-md border border-gray-700 rounded-xl shadow-lg;
+  }
+  
+  .glass-card {
+    @apply bg-gray-700/50 backdrop-blur-sm border border-gray-600 rounded-lg shadow-sm transition-colors;
+  }
+  
+  .glass-card:hover {
+    @apply bg-gray-600/50 border-gray-500;
+  }
+
+  .badge {
+    @apply px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider;
+  }
+  
+  .badge-danger {
+    @apply bg-danger-900 text-danger-500 border border-danger-500/30;
+  }
+  
+  .badge-warning {
+    @apply bg-warning-900 text-warning-500 border border-warning-500/30;
+  }
+  
+  .badge-success {
+    @apply bg-success-900 text-success-500 border border-success-500/30;
+  }
+  
+  .badge-neutral {
+    @apply bg-gray-700 text-gray-300 border border-gray-600;
+  }
+  
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all shadow-sm flex items-center justify-center gap-2;
+  }
+  
+  .btn-primary {
+    @apply bg-brand-600 text-white hover:bg-brand-500 hover:shadow-brand-500/20 shadow-md;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-700 text-white hover:bg-gray-600 border border-gray-600 hover:border-gray-500;
+  }
+  
+  .btn-danger {
+    @apply bg-danger-500/20 text-danger-500 hover:bg-danger-500/30 border border-danger-500/30;
+  }
+}

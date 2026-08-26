@@ -1,4 +1,4 @@
-# Evaluation protocol — v0.1 (locked before M02)
+# Evaluation protocol — v0.3 (updated after M03)
 
 ## Primary hypothesis
 
@@ -24,26 +24,23 @@ feature choices, model selection, threshold selection, or economic assumptions.
 ## Planned model comparison
 
 - **System A:** merchant-local decision-time features only.
-- **System B:** System A plus cross-merchant relationship features.
-- **System C:** System B plus temporal/emerging-cluster features.
+- **System B:** System A plus cross-merchant relationship features (device, network group, and account features).
+- **System C:** System B plus temporal/emerging-cluster features or feedback-loop features.
 
-Thresholds will be selected exclusively on validation data and frozen before
-the held-out test is evaluated.
+Thresholds are selected exclusively on validation data using cost-aware thresholding with a maximum False Positive Rate constraint (5%), and are frozen before the held-out test is evaluated.
+Ablations for System B are conducted to measure the value of specific network feature groups.
 
 ## Metrics
 
-M02+ must report precision, recall, F1, FPR, confusion matrix, PR-AUC where
-appropriate, and threshold. TTD is the first qualifying alert timestamp minus
-the first ground-truth campaign event timestamp. Missed campaigns are reported
-as misses and excluded only from the *detected-campaign* TTD median, never
-silently dropped from detection coverage.
+All systems report precision, recall, F1, FPR, confusion matrix, PR-AUC, threshold, expected cost, loss before detection, coverage, and time-to-detection (TTD). 
 
-Economic metrics will be introduced in a versioned pre-test cost-assumption
-table before Experiment 001. No monetary or performance claim exists in M01.
+- **TTD** is the first qualifying alert timestamp minus the first ground-truth campaign event timestamp. 
+- **Missed campaigns** are reported as misses and excluded from the detected-campaign TTD median, lowering overall detection coverage.
+- **Loss Before Detection** aggregates the total financial volume of fraudulent transactions in a campaign that occurred prior to detection.
 
 ## Leakage checks
 
 M01 checks label/scenario/campaign separation, time ordering, temporal cohort
 boundaries, entity disjointness, duplicate transactions, opaque IDs, campaign
-cohort containment, and constant abuse-signature artifacts. M02 adds feature
-as-of-time tests; M03/M04 extend them for graph and temporal features.
+cohort containment, and constant abuse-signature artifacts. M02 and M03 implemented feature
+as-of-time tests and verified strictly causal feature extraction. M04 will extend them for feedback loop features.
