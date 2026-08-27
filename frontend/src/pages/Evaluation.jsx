@@ -55,7 +55,7 @@ export default function Evaluation() {
       <div className="bg-brand-900/20 border border-brand-500/30 rounded-lg p-4 flex gap-3 text-sm text-gray-300">
         <Info size={18} className="text-brand-500 flex-shrink-0" />
         <div>
-          <strong className="text-brand-400">Important:</strong> These results reflect 
+          <strong className="text-brand-400">Important:</strong> These results reflect
           <strong> synthetic benchmarks</strong> and <strong>synthetic economic assumptions</strong>.
           They do not represent live production metrics.
         </div>
@@ -107,7 +107,7 @@ export default function Evaluation() {
         return (
           <div className="glass-panel p-6 border-brand-500/30 relative overflow-hidden mt-8">
             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-3xl transform translate-x-10 -translate-y-10"></div>
-            
+
             <h2 className="text-xl font-bold text-gray-100 mb-4">Candidate D (Operating Point)</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
@@ -137,23 +137,90 @@ export default function Evaluation() {
             <h2 className="text-lg font-semibold text-gray-100">M04-R Robustness Test (Noise + Temporal Shift)</h2>
           </div>
           <div className="p-6 grid grid-cols-2 gap-6">
-             <div>
-               <p className="text-sm font-medium text-gray-300">Baseline F1</p>
-               <p className="text-lg font-mono text-gray-400">{formatMetric(metrics.m04_r.baseline_f1)}</p>
-             </div>
-             <div>
-               <p className="text-sm font-medium text-gray-300">Shifted F1</p>
-               <p className="text-lg font-mono text-warning-500">{formatMetric(metrics.m04_r.shifted_f1)}</p>
-             </div>
-             <div className="col-span-2">
-               <p className="text-sm font-medium text-gray-300">Drop Ratio</p>
-               <p className="text-lg font-mono text-danger-400">
-                 {((metrics.m04_r.baseline_f1 - metrics.m04_r.shifted_f1) / metrics.m04_r.baseline_f1 * 100).toFixed(2)}%
-               </p>
-               <p className="text-xs text-gray-500 mt-2">
-                 Shows the model's resistance to data drift and intentional obfuscation of temporal signals.
-               </p>
-             </div>
+            <div>
+              <p className="text-sm font-medium text-gray-300">Baseline F1</p>
+              <p className="text-lg font-mono text-gray-400">{formatMetric(metrics.m04_r.baseline_f1)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-300">Shifted F1</p>
+              <p className="text-lg font-mono text-warning-500">{formatMetric(metrics.m04_r.shifted_f1)}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-sm font-medium text-gray-300">Drop Ratio</p>
+              <p className="text-lg font-mono text-danger-400">
+                {((metrics.m04_r.baseline_f1 - metrics.m04_r.shifted_f1) / metrics.m04_r.baseline_f1 * 100).toFixed(2)}%
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Shows the model's resistance to data drift and intentional obfuscation of temporal signals.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {metrics.m12_external_benchmark && (
+        <div className="glass-panel overflow-hidden mt-12 border-brand-400/30">
+          <div className="px-6 py-4 border-b border-gray-700 bg-gray-800/50 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-100">External Benchmark: Transaction-Level Capability</h2>
+            <span className="text-xs font-mono text-brand-400 bg-brand-900/30 px-2 py-1 rounded">Kaggle Credit Card Fraud</span>
+          </div>
+
+          <div className="p-6 space-y-6">
+            <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 text-sm text-gray-300">
+              <strong className="text-brand-400">Disclaimer:</strong> This benchmark evaluates transaction-level classification on an external dataset with different features from Candidate D (Time, Amount, V1-V28). It does <strong>not</strong> validate Sentinel Mesh's network/temporal coordinated-abuse capability or the agentic investigation system.
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <p className="text-xs text-gray-400 uppercase">PR-AUC</p>
+                <p className="text-xl font-bold text-gray-100">{formatMetric(metrics.m12_external_benchmark.metrics.pr_auc)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase">F1 Score</p>
+                <p className="text-xl font-bold text-brand-400">{formatMetric(metrics.m12_external_benchmark.metrics.f1)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase">Precision</p>
+                <p className="text-xl font-bold text-gray-100">{formatMetric(metrics.m12_external_benchmark.metrics.precision)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase">Recall</p>
+                <p className="text-xl font-bold text-gray-100">{formatMetric(metrics.m12_external_benchmark.metrics.recall)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase">False Positives</p>
+                <p className="text-xl font-bold text-warning-400">{metrics.m12_external_benchmark.metrics.false_positives}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase">False Negatives</p>
+                <p className="text-xl font-bold text-danger-400">{metrics.m12_external_benchmark.metrics.false_negatives}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase">Normalized Cost</p>
+                <p className="text-xl font-bold text-gray-100">{formatMetric(metrics.m12_external_benchmark.cost_analysis.normalized_cost.expected_total_cost)}</p>
+                <p className="text-[10px] text-gray-500 mt-1">Assumes $100/FP, $500/FN</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase">Benchmark Cost</p>
+                <p className="text-xl font-bold text-gray-100">{formatMetric(metrics.m12_external_benchmark.cost_analysis.benchmark_specific_cost.expected_total_cost)}</p>
+                <p className="text-[10px] text-gray-500 mt-1">Assumes $100/FP, Actual Amt/FN</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-gray-700">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-3 text-center">Precision-Recall Curve</h3>
+                <div className="bg-white rounded-lg p-2 flex items-center justify-center">
+                  <img src={`/api/artifacts/m12_external_benchmark/pr_curve.png`} alt="PR Curve" className="max-w-full h-auto max-h-64 object-contain" onError={(e) => e.target.style.display = 'none'} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-3 text-center">Confusion Matrix</h3>
+                <div className="bg-white rounded-lg p-2 flex items-center justify-center">
+                  <img src={`/api/artifacts/m12_external_benchmark/confusion_matrix.png`} alt="Confusion Matrix" className="max-w-full h-auto max-h-64 object-contain" onError={(e) => e.target.style.display = 'none'} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

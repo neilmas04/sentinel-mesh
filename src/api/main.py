@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
@@ -71,6 +72,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount artifacts directory for serving plots
+app.mount("/api/artifacts", StaticFiles(directory="artifacts"), name="artifacts")
 
 def classify_risk(score: float, threshold: float) -> str:
     if score >= threshold:
@@ -244,7 +248,8 @@ async def get_evaluation():
             "m02": repo_root / "artifacts/experiments/m02_baseline/metadata.json",
             "m03": repo_root / "artifacts/experiments/m03_system_b/metadata.json",
             "m04": repo_root / "artifacts/experiments/m04_system_c/metadata.json",
-            "candidate_d": repo_root / "artifacts/models/candidate_d/metadata.json"
+            "candidate_d": repo_root / "artifacts/models/candidate_d/metadata.json",
+            "m12_external_benchmark": repo_root / "artifacts/experiments/m12_external_benchmark/metadata.json"
         }
         
         for key, p in paths.items():
