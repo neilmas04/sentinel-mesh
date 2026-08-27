@@ -14,3 +14,8 @@ frontend/dist/
 # Reproducible generated datasets and experiment output
 data/generated/
 artifacts/
+
+# Local database and temporary files
+sentinel.db
+pytest_output.txt
+*_output.txt

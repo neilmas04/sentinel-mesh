@@ -11,7 +11,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-print("MAIN LOADED KEY:", os.environ.get("GOOGLE_API_KEY")[:10] if os.environ.get("GOOGLE_API_KEY") else "MISSING")
+
 
 from src.api.schemas import ScoreRequest, ScoreResponse, RiskCaseSchema, InvestigationResponse, MerchantSpikeResponse
 from src.api.database import init_db, update_investigation, get_all_cases, get_dashboard_summary
