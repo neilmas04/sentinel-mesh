@@ -39,8 +39,13 @@ export default function CaseDetail() {
     }
   };
 
-  if (loading) return <div className="animate-pulse">Loading case details...</div>;
-  if (!caseData) return <div className="text-danger-500">Case not found.</div>;
+  if (loading) {
+    return <div className="animate-pulse">Loading case details...</div>;
+  }
+
+  if (!caseData) {
+    return <div className="text-danger-500">Case not found.</div>;
+  }
 
   const {
     risk_score,
@@ -149,8 +154,8 @@ export default function CaseDetail() {
               <div>
                 <p className="text-xs text-gray-400 mb-1">Final Action</p>
                 <span className={`badge ${policy_decision.action === 'HOLD' ? 'badge-danger' :
-                    policy_decision.action === 'ENHANCED_VERIFICATION' ? 'badge-warning' :
-                      policy_decision.action === 'MANUAL_REVIEW' ? 'badge-neutral' : 'badge-success'
+                  policy_decision.action === 'ENHANCED_VERIFICATION' ? 'badge-warning' :
+                    policy_decision.action === 'MANUAL_REVIEW' ? 'badge-neutral' : 'badge-success'
                   }`}>
                   {policy_decision.action}
                 </span>
@@ -158,7 +163,7 @@ export default function CaseDetail() {
               <div>
                 <p className="text-xs text-gray-400 mb-1">Grounding / AI Status</p>
                 <span className={`text-sm font-medium ${policy_decision.grounding_status === 'SAFE' ? 'text-success-500' :
-                    policy_decision.grounding_status === 'AI_UNAVAILABLE' ? 'text-danger-500' : 'text-warning-500'
+                  policy_decision.grounding_status === 'AI_UNAVAILABLE' ? 'text-danger-500' : 'text-warning-500'
                   }`}>
                   {policy_decision.grounding_status}
                 </span>

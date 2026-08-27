@@ -59,7 +59,9 @@ class MerchantSpikeDetector:
         current_flagged = df_current['is_flagged'].sum()
         
         # Explicitly inject the live observation into bucket 0
+        is_live_supplied = False
         if live_observation:
+            is_live_supplied = True
             current_total += 1
             if live_observation.get('is_flagged', False):
                 current_flagged += 1
@@ -72,20 +74,57 @@ class MerchantSpikeDetector:
             flagged=('is_flagged', 'sum')
         )
         
-        # We must ensure all baseline buckets are accounted for, even empty ones
-        # up to the maximum bucket index found, or up to lookback_window?
-        # The prompt says: "If fewer than the required lookback buckets exist, return an explicit baseline_insufficient flag"
-        # Wait, if a merchant has no transactions in a bucket, the rate is 0.
-        # But if the merchant didn't exist (first transaction was 3 hours ago), do we have 6 buckets?
-        # Let's check the oldest transaction for this merchant.
-        oldest_tx_time = df_m['timestamp'].min()
-        merchant_age = current_time - oldest_tx_time
-        available_buckets = (merchant_age // freq) + 1
+        if df_m.empty:
+            available_buckets = 0
+        else:
+            oldest_tx_time = df_m['timestamp'].min()
+            merchant_age = current_time - oldest_tx_time
+            available_buckets = (merchant_age // freq) + 1
+            
+        # Build timeline
+        timeline = []
+        max_historical_bucket = min(self.lookback_window, int(available_buckets) - 1) if available_buckets > 0 else 0
+        
+        for i in range(max_historical_bucket, 0, -1):
+            if i in baseline_buckets.index:
+                row = baseline_buckets.loc[i]
+                total = int(row['total'])
+                flagged = int(row['flagged'])
+            else:
+                total = 0
+                flagged = 0
+            
+            rate = flagged / total if total > 0 else 0.0
+            bucket_end = current_time - (i - 1) * freq
+            bucket_start = current_time - i * freq
+            
+            timeline.append({
+                "bucket_idx": i,
+                "start_time": bucket_start.isoformat(),
+                "end_time": bucket_end.isoformat(),
+                "total_transactions": total,
+                "flagged_transactions": flagged,
+                "flagged_rate": rate,
+                "is_live": False,
+                "is_baseline": True
+            })
+            
+        # Add bucket 0
+        timeline.append({
+            "bucket_idx": 0,
+            "start_time": (current_time - freq).isoformat(),
+            "end_time": current_time.isoformat(),
+            "total_transactions": int(current_total),
+            "flagged_transactions": int(current_flagged),
+            "flagged_rate": float(current_rate),
+            "is_live": is_live_supplied,
+            "is_baseline": False
+        })
         
         if available_buckets <= self.lookback_window:
             # Baseline insufficient
             return self._insufficient_baseline_result(
-                merchant_id, current_time, current_total, current_flagged, current_rate
+                merchant_id, current_time, current_total, current_flagged, current_rate, timeline
             )
             
         # Fill missing buckets with 0
@@ -139,7 +178,8 @@ class MerchantSpikeDetector:
             "rate_multiplier": float(rate_multiplier) if rate_multiplier is not None else None,
             "spike_score": float(spike_score) if spike_score is not None else None,
             "severity": severity,
-            "baseline_insufficient": False
+            "baseline_insufficient": False,
+            "timeline": timeline
         }
         
     def _classify_severity(self, spike_score: float, rate_multiplier: float) -> str:
@@ -155,6 +195,17 @@ class MerchantSpikeDetector:
         return "NORMAL"
         
     def _empty_result(self, merchant_id: str, current_time: pd.Timestamp) -> Dict[str, Any]:
+        freq = pd.Timedelta(self.bucket_size)
+        timeline = [{
+            "bucket_idx": 0,
+            "start_time": (current_time - freq).isoformat(),
+            "end_time": current_time.isoformat(),
+            "total_transactions": 0,
+            "flagged_transactions": 0,
+            "flagged_rate": 0.0,
+            "is_live": False,
+            "is_baseline": False
+        }]
         return {
             "merchant_id": merchant_id,
             "timestamp": current_time.isoformat(),
@@ -166,11 +217,12 @@ class MerchantSpikeDetector:
             "rate_multiplier": 1.0,
             "spike_score": 0.0,
             "severity": "NORMAL",
-            "baseline_insufficient": True
+            "baseline_insufficient": True,
+            "timeline": timeline
         }
         
     def _insufficient_baseline_result(self, merchant_id: str, current_time: pd.Timestamp, 
-                                      total: int, flagged: int, rate: float) -> Dict[str, Any]:
+                                      total: int, flagged: int, rate: float, timeline: list) -> Dict[str, Any]:
         return {
             "merchant_id": merchant_id,
             "timestamp": current_time.isoformat(),
@@ -182,5 +234,6 @@ class MerchantSpikeDetector:
             "rate_multiplier": None,
             "spike_score": None,
             "severity": "NORMAL",
-            "baseline_insufficient": True
+            "baseline_insufficient": True,
+            "timeline": timeline
         }

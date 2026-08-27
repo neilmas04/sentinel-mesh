@@ -51,6 +51,16 @@ class InvestigationResponse(BaseModel):
     recommended_next_step: Optional[str]
     failure_reason: Optional[str]
 
+class TimelineBucket(BaseModel):
+    bucket_idx: int
+    start_time: str
+    end_time: str
+    total_transactions: int
+    flagged_transactions: int
+    flagged_rate: float
+    is_live: bool
+    is_baseline: bool
+
 class MerchantSpikeResponse(BaseModel):
     merchant_id: str
     timestamp: str
@@ -63,3 +73,4 @@ class MerchantSpikeResponse(BaseModel):
     spike_score: Optional[float]
     severity: str
     baseline_insufficient: bool
+    timeline: Optional[List[TimelineBucket]] = None

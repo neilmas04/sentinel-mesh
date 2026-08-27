@@ -82,6 +82,7 @@ export default function MerchantSpikePanel({ liveSimulationContext }) {
                             <th className="px-6 py-3 font-medium">Baseline (μ ± σ)</th>
                             <th className="px-6 py-3 font-medium">Multiplier</th>
                             <th className="px-6 py-3 font-medium">Spike Score</th>
+                            <th className="px-6 py-3 font-medium">Timeline</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700">
@@ -103,6 +104,22 @@ export default function MerchantSpikePanel({ liveSimulationContext }) {
                                 </td>
                                 <td className="px-6 py-4 font-mono">
                                     {s.spike_score !== null ? s.spike_score.toFixed(2) : '-'}
+                                </td>
+                                <td className="px-6 py-4">
+                                    {s.timeline && s.timeline.length > 0 ? (
+                                        <div className="flex items-end gap-1 h-8">
+                                            {s.timeline.map((bucket, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className={`w-3 rounded-t-sm ${bucket.is_live ? 'bg-brand-500' : 'bg-gray-500'} ${bucket.is_live ? 'opacity-100' : 'opacity-70'}`}
+                                                    style={{ height: `${Math.max(10, bucket.flagged_rate * 100)}%` }}
+                                                    title={`Bucket ${bucket.bucket_idx} ${bucket.is_live ? '(LIVE)' : '(BASELINE)'}: ${(bucket.flagged_rate * 100).toFixed(1)}% flagged (${bucket.flagged_transactions}/${bucket.total_transactions})`}
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-500 text-xs">No timeline</span>
+                                    )}
                                 </td>
                             </tr>
                         ))}
