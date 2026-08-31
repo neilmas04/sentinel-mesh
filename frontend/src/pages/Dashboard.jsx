@@ -70,7 +70,7 @@ export default function Dashboard({ liveSimulationContext }) {
             <thead className="bg-gray-800/50 text-gray-400 uppercase text-xs">
               <tr>
                 <th className="px-6 py-3 font-medium">Case ID</th>
-                <th className="px-6 py-3 font-medium">TxID</th>
+                <th className="px-6 py-3 font-medium">Entity</th>
                 <th className="px-6 py-3 font-medium">Risk Score</th>
                 <th className="px-6 py-3 font-medium">Risk Level</th>
                 <th className="px-6 py-3 font-medium">Status</th>
@@ -81,7 +81,10 @@ export default function Dashboard({ liveSimulationContext }) {
               {cases.map((c) => (
                 <tr key={c.case_id} className="hover:bg-gray-800/30 transition">
                   <td className="px-6 py-4 font-mono text-xs">{c.case_id}</td>
-                  <td className="px-6 py-4 font-mono text-xs text-gray-500">{c.transaction_id}</td>
+                  <td className="px-6 py-4 font-mono text-xs text-gray-500">
+                    <span className="text-[10px] uppercase bg-gray-700 px-1 rounded mr-1">{c.entity_type || 'TRANSACTION'}</span>
+                    {c.entity_id || c.transaction_id}
+                  </td>
                   <td className="px-6 py-4 font-mono">{c.risk_score.toFixed(4)}</td>
                   <td className="px-6 py-4">
                     <span className={`badge ${c.risk_level === 'HIGH' ? 'badge-danger' : c.risk_level === 'MEDIUM' ? 'badge-warning' : 'badge-neutral'}`}>
@@ -89,7 +92,9 @@ export default function Dashboard({ liveSimulationContext }) {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    {c.investigation_status === 'UNINVESTIGATED' ? (
+                    {c.status === 'CLOSED' ? (
+                      <span className="text-gray-500">Closed ({c.disposition})</span>
+                    ) : c.investigation_status === 'UNINVESTIGATED' ? (
                       <span className="text-gray-500">Uninvestigated</span>
                     ) : (
                       <span className="text-brand-500">Investigated</span>

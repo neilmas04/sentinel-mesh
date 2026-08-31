@@ -25,6 +25,28 @@ export const investigateCase = async (caseId, simulateAiFailure = false) => {
   return res.json();
 };
 
+export const fetchCaseSignals = async (caseId) => {
+  const res = await fetch(`${API_BASE}/cases/${caseId}/signals`);
+  if (!res.ok) throw new Error('Failed to fetch case signals');
+  return res.json();
+};
+
+export const fetchCaseAuditLog = async (caseId) => {
+  const res = await fetch(`${API_BASE}/cases/${caseId}/audit`);
+  if (!res.ok) throw new Error('Failed to fetch case audit log');
+  return res.json();
+};
+
+export const setCaseDisposition = async (caseId, disposition, analystNotes, analystId) => {
+  const res = await fetch(`${API_BASE}/cases/${caseId}/disposition`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ disposition, analyst_notes: analystNotes, analyst_id: analystId })
+  });
+  if (!res.ok) throw new Error('Failed to set disposition');
+  return res.json();
+};
+
 export const fetchEvaluation = async () => {
   const res = await fetch(`${API_BASE}/evaluation`);
   if (!res.ok) throw new Error('Failed to fetch evaluation');

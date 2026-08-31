@@ -31,11 +31,11 @@ def test_init_db_preserves_existing_data():
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO risk_cases (
-                case_id, transaction_id, as_of_timestamp, risk_score, risk_level, 
+                case_id, entity_type, entity_id, transaction_id, as_of_timestamp, risk_score, risk_level, 
                 triggered_signals, model_version, feature_version, status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            "CASE-TEST1", "tx1", "2026-01-01T00:00:00Z", 0.9, "HIGH",
+            "CASE-TEST1", "TRANSACTION", "tx1", "tx1", "2026-01-01T00:00:00Z", 0.9, "HIGH",
             "[]", "v1", "v1", "OPEN", "2026-01-01T00:00:00Z"
         ))
         conn.commit()

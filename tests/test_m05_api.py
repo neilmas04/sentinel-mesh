@@ -60,7 +60,17 @@ def test_valid_scoring_and_case_creation(client):
         case_data = case_resp.json()
         assert case_data["transaction_id"] == tx_id
         assert case_data["risk_score"] == data["risk_score"]
-        assert "temporal_growth_spike" in case_data["triggered_signals"]
+        assert "CANDIDATE_D" in case_data["triggered_signals"]
+        
+        # Verify signal details
+        signals_resp = client.get(f"/api/v1/cases/{data['case_id']}/signals")
+        assert signals_resp.status_code == 200
+        signals_data = signals_resp.json()
+        
+        candidate_d_signal = next((s for s in signals_data if s["signal_type"] == "CANDIDATE_D"), None)
+        assert candidate_d_signal is not None
+        assert "temporal_growth_spike" in candidate_d_signal["details"]["triggered_signals"]
+        assert "network_sync_anomaly" in candidate_d_signal["details"]["triggered_signals"]
         
         # Check database persistence directly
         conn = sqlite3.connect("sentinel.db")
@@ -125,3 +135,23 @@ def test_simulation_response_fields(client):
     assert "as_of_timestamp" in data
     assert data["as_of_timestamp"] is not None
 
+def test_simulation_normal_scenario(client):
+    # The NORMAL scenario should only select transactions with is_abuse == 0
+    # and should not create a case (is_flagged should be False).
+    import pandas as pd
+    labels = pd.read_csv("data/generated/m01-world-v1/ground_truth/event_labels.csv")
+    
+    for _ in range(5):
+        response = client.post("/api/v1/simulation/step", json={"scenario": "NORMAL"})
+        assert response.status_code == 200
+        data = response.json()
+        
+        tx_id = data["transaction_id"]
+        
+        # Verify it's not an abuse transaction
+        is_abuse = labels[labels['transaction_id'] == tx_id]['is_abuse'].iloc[0]
+        assert is_abuse == 0
+        
+        # Verify no case was created (is_flagged should be False)
+        assert data.get("is_flagged", False) == False
+        assert data.get("case_id") is None

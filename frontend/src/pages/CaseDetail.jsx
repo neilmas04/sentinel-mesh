@@ -1,41 +1,65 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchCaseDetail, investigateCase } from '../apiClient';
-import { AlertCircle, FileText, CheckCircle2, ShieldAlert, Cpu } from 'lucide-react';
+import { fetchCaseDetail, investigateCase, fetchCaseSignals, fetchCaseAuditLog, setCaseDisposition } from '../apiClient';
+import { AlertCircle, FileText, CheckCircle2, ShieldAlert, Cpu, Activity, List, UserCheck } from 'lucide-react';
 import NetworkGraph from '../components/NetworkGraph';
 
 export default function CaseDetail() {
   const { caseId } = useParams();
   const [caseData, setCaseData] = useState(null);
+  const [signals, setSignals] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [investigating, setInvestigating] = useState(false);
+  const [dispositionForm, setDispositionForm] = useState({ disposition: 'CONFIRMED_ABUSE', notes: '' });
+  const [submittingDisposition, setSubmittingDisposition] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const [data, sigs, audit] = await Promise.all([
+        fetchCaseDetail(caseId),
+        fetchCaseSignals(caseId),
+        fetchCaseAuditLog(caseId)
+      ]);
+      setCaseData(data);
+      setSignals(sigs);
+      setAuditLog(audit);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function load() {
-      try {
-        const data = await fetchCaseDetail(caseId);
-        setCaseData(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    loadData();
   }, [caseId]);
 
   const handleInvestigate = async () => {
     setInvestigating(true);
     try {
       const isAiFailure = new URLSearchParams(window.location.search).get('scenario') === 'AI_FAILURE';
-      const data = await investigateCase(caseId, isAiFailure);
-      // Data contains the full updated case response
-      setCaseData(data); // Re-render with new data
+      await investigateCase(caseId, isAiFailure);
+      await loadData(); // Reload everything
     } catch (err) {
       console.error(err);
       alert('Investigation failed.');
     } finally {
       setInvestigating(false);
+    }
+  };
+
+  const handleDispositionSubmit = async (e) => {
+    e.preventDefault();
+    setSubmittingDisposition(true);
+    try {
+      await setCaseDisposition(caseId, dispositionForm.disposition, dispositionForm.notes, "ANALYST-01");
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit disposition.');
+    } finally {
+      setSubmittingDisposition(false);
     }
   };
 
@@ -53,6 +77,11 @@ export default function CaseDetail() {
     model_version,
     created_at,
     investigation_status,
+    status,
+    entity_type,
+    entity_id,
+    disposition,
+    analyst_notes,
     evidence,
     evidence_bundle, // from get_case
     ai_dossier,
@@ -111,7 +140,11 @@ export default function CaseDetail() {
           <h1 className="text-2xl font-bold text-gray-100 font-mono">{caseId}</h1>
           <p className="text-gray-400 text-sm mt-1">Generated: {new Date(created_at || new Date()).toLocaleString()}</p>
         </div>
-        {investigation_status === 'UNINVESTIGATED' ? (
+        {status === 'CLOSED' ? (
+          <span className="badge badge-neutral px-3 py-1 flex items-center gap-2">
+            <CheckCircle2 size={14} className="text-gray-400" /> Closed ({disposition})
+          </span>
+        ) : investigation_status === 'UNINVESTIGATED' ? (
           <button
             onClick={handleInvestigate}
             disabled={investigating}
@@ -131,16 +164,21 @@ export default function CaseDetail() {
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Risk Profile</h3>
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-gray-400">Risk Level</p>
-              <p className={`text-xl font-bold mt-1 ${risk_level === 'HIGH' ? 'text-danger-500' : 'text-warning-500'}`}>{risk_level}</p>
+              <p className="text-xs text-gray-400">Entity</p>
+              <p className="text-lg font-mono text-gray-200 mt-1">
+                <span className="text-[10px] uppercase bg-gray-700 px-1 rounded mr-1">{entity_type || 'TRANSACTION'}</span>
+                {entity_id}
+              </p>
             </div>
-            <div>
-              <p className="text-xs text-gray-400">Risk Score</p>
-              <p className="text-lg font-mono text-gray-200 mt-1">{risk_score?.toFixed(4)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400">Model Version</p>
-              <p className="text-sm font-mono text-gray-400 mt-1">{model_version}</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-400">Risk Level</p>
+                <p className={`text-xl font-bold mt-1 ${risk_level === 'HIGH' ? 'text-danger-500' : 'text-warning-500'}`}>{risk_level}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Risk Score</p>
+                <p className="text-lg font-mono text-gray-200 mt-1">{risk_score?.toFixed(4)}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -187,6 +225,82 @@ export default function CaseDetail() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="glass-panel p-5">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Activity size={16} className="text-brand-500" /> Related Signals ({signals.length})
+          </h3>
+          <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+            {signals.map(sig => (
+              <div key={sig.signal_id} className="p-3 bg-gray-800/50 rounded border border-gray-700/50">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-mono text-xs font-bold text-gray-200">{sig.transaction_id}</span>
+                  <span className="text-[10px] text-brand-400 bg-brand-900 px-1.5 py-0.5 rounded">{sig.signal_type}</span>
+                </div>
+                <div className="flex justify-between text-[10px] text-gray-400">
+                  <span>{new Date(sig.timestamp).toLocaleString()}</span>
+                  <span>Score: {sig.risk_score?.toFixed(4)}</span>
+                </div>
+              </div>
+            ))}
+            {signals.length === 0 && <p className="text-sm text-gray-500">No related signals found.</p>}
+          </div>
+        </div>
+
+        <div className="glass-panel p-5">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <UserCheck size={16} className="text-brand-500" /> Analyst Disposition
+          </h3>
+          {status === 'CLOSED' ? (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-gray-400">Final Disposition</p>
+                <p className="text-lg font-bold text-gray-100 mt-1">{disposition}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Analyst Notes</p>
+                <p className="text-sm text-gray-300 mt-1 p-3 bg-gray-800/50 rounded border border-gray-700/50">{analyst_notes}</p>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleDispositionSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Disposition</label>
+                <select
+                  className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm text-gray-200 focus:border-brand-500 focus:outline-none"
+                  value={dispositionForm.disposition}
+                  onChange={e => setDispositionForm({ ...dispositionForm, disposition: e.target.value })}
+                  disabled={submittingDisposition}
+                >
+                  <option value="CONFIRMED_ABUSE">Confirmed Abuse</option>
+                  <option value="FALSE_POSITIVE">False Positive</option>
+                  <option value="MONITORED">Monitored</option>
+                  <option value="ESCALATED">Escalated</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Notes</label>
+                <textarea
+                  className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm text-gray-200 focus:border-brand-500 focus:outline-none h-20"
+                  placeholder="Enter investigation notes..."
+                  value={dispositionForm.notes}
+                  onChange={e => setDispositionForm({ ...dispositionForm, notes: e.target.value })}
+                  disabled={submittingDisposition}
+                  required
+                ></textarea>
+              </div>
+              <button
+                type="submit"
+                className="btn btn-primary w-full"
+                disabled={submittingDisposition}
+              >
+                {submittingDisposition ? 'Submitting...' : 'Submit Disposition'}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
 
       {investigation_status !== 'UNINVESTIGATED' && (
@@ -333,6 +447,28 @@ export default function CaseDetail() {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="glass-panel p-5 mt-6">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <List size={16} className="text-brand-500" /> Audit Log
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+              {auditLog.map(log => (
+                <div key={log.log_id} className="flex gap-4 p-3 bg-gray-800/30 rounded border border-gray-700/30 text-sm">
+                  <div className="text-gray-500 font-mono text-xs whitespace-nowrap">
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </div>
+                  <div>
+                    <p className="text-gray-300">
+                      <span className="font-semibold text-brand-400">{log.actor}</span> triggered <span className="font-mono text-xs bg-gray-700 px-1 rounded">{log.event_type}</span>
+                    </p>
+                    {log.reason && <p className="text-xs text-gray-500 mt-1">{log.reason}</p>}
+                  </div>
+                </div>
+              ))}
+              {auditLog.length === 0 && <p className="text-sm text-gray-500">No audit logs found.</p>}
             </div>
           </div>
         </>

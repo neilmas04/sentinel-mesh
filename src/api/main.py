@@ -14,12 +14,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from src.api.schemas import ScoreRequest, ScoreResponse, RiskCaseSchema, InvestigationResponse, MerchantSpikeResponse
-from src.api.database import init_db, update_investigation, get_all_cases, get_dashboard_summary
-from src.api.cases import generate_case_if_needed, retrieve_case
+from src.api.schemas import ScoreRequest, ScoreResponse, RiskCaseSchema, InvestigationResponse, MerchantSpikeResponse, CaseSignalSchema, CaseAuditLogSchema, DispositionRequest
+from src.api.database import init_db, update_investigation, get_all_cases, get_dashboard_summary, get_case_signals, get_case_audit_log, update_case_disposition
+from src.api.cases import process_risk_signals, retrieve_case
 from src.features.local_features import LocalFeatureExtractor
 from src.features.network_features import NetworkFeatureExtractor
 from src.features.temporal_features import TemporalFeatureExtractor
+from src.features.early_warning import EarlyWarningDetector
 from src.agent.tools import AgentTools
 from src.agent.investigator import RiskInvestigator
 from src.api.policy import PolicyEngine
@@ -121,19 +122,43 @@ async def score_transaction(request: ScoreRequest):
     features = app_state["metadata"]["features"]
     X = feature_row[features]
     
-    # Inference
+    # Inference Candidate D
     model = app_state["model"]
     risk_score = float(model.predict_proba(X)[:, 1][0])
     
     threshold = app_state["metadata"]["threshold"]
     risk_level = classify_risk(risk_score, threshold)
     
+    signals = []
+    if risk_level in ["HIGH", "CRITICAL"]:
+        signals.append({
+            "signal_type": "CANDIDATE_D",
+            "risk_score": risk_score,
+            "details": {"risk_level": risk_level, "triggered_signals": ["temporal_growth_spike", "network_sync_anomaly"]}
+        })
+        
+    # Inference Early Warning
+    ew_detector = EarlyWarningDetector()
+    ew_result = ew_detector.evaluate(feature_row.iloc[0])
+    
+    if ew_result["triggered"]:
+        signals.append({
+            "signal_type": "EARLY_WARNING",
+            "risk_score": None,
+            "details": {
+                "detector_version": ew_result["detector_version"],
+                "signals": ew_result["signals"]
+            }
+        })
+    
     # Case Creation (Policy)
-    case_id = generate_case_if_needed(
+    case_id = process_risk_signals(
         transaction_id=tx_id,
         as_of_timestamp=current_ts.isoformat(),
-        risk_score=risk_score,
-        risk_level=risk_level,
+        signals=signals,
+        account_id=current_tx.get('account_id'),
+        device_id=current_tx.get('device_id'),
+        merchant_id=current_tx.get('merchant_id'),
         model_version=app_state["metadata"]["model_version"],
         feature_version="v1"
     )
@@ -161,6 +186,29 @@ async def get_case(case_id: str):
     if not case:
         raise HTTPException(status_code=404, detail="Case not found.")
     return case
+
+@app.get("/api/v1/cases/{case_id}/signals", response_model=List[CaseSignalSchema])
+async def get_signals(case_id: str):
+    signals = get_case_signals(case_id)
+    return signals
+
+@app.get("/api/v1/cases/{case_id}/audit", response_model=List[CaseAuditLogSchema])
+async def get_audit_log(case_id: str):
+    audit_log = get_case_audit_log(case_id)
+    return audit_log
+
+@app.patch("/api/v1/cases/{case_id}/disposition")
+async def set_disposition(case_id: str, request: DispositionRequest):
+    try:
+        update_case_disposition(
+            case_id=case_id,
+            disposition=request.disposition,
+            analyst_notes=request.analyst_notes,
+            analyst_id=request.analyst_id
+        )
+        return {"status": "success"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 @app.post("/api/v1/cases/{case_id}/investigate", response_model=InvestigationResponse)
 async def investigate_case(case_id: str, simulate_ai_failure: bool = False):
@@ -341,7 +389,9 @@ async def simulation_step(req: SimulationStepRequest):
     # Simple simulation logic based on ground truth labels in a real scenario.
     # Here we pick transactions based on some simplistic logic representing the scenario.
     if scenario == "NORMAL":
-        tx = df_all.sample(n=1).iloc[0]
+        labels = pd.read_csv("data/generated/m01-world-v1/ground_truth/event_labels.csv")
+        normal_txs = labels[labels['is_abuse'] == 0]['transaction_id'].tolist()
+        tx = df_all[df_all['transaction_id'].isin(normal_txs)].sample(n=1).iloc[0]
     elif scenario == "COORDINATED_ACTIVITY":
         # Find a transaction that belongs to a known cluster (e.g. from generated data)
         # We know we have a test cohort, let's just pick a high-risk one
@@ -359,4 +409,39 @@ async def simulation_step(req: SimulationStepRequest):
         
     # We trigger the score endpoint internally
     score_req = ScoreRequest(transaction_id=tx['transaction_id'])
-    return await score_transaction(score_req)
+    score_res = await score_transaction(score_req)
+    
+    # Also evaluate Merchant Spike for the transaction's merchant
+    merchant_id = tx['merchant_id']
+    detector = MerchantSpikeDetector(bucket_size='1h', lookback_window=6)
+    flagged_tx_ids = get_flagged_transactions()
+    
+    # If the current transaction was flagged, we should include it in the live observation
+    live_observation = None
+    if score_res.is_flagged:
+        live_observation = {
+            "live_tx_id": tx['transaction_id'],
+            "is_flagged": True
+        }
+        
+    spike_res = detector.compute_spike(merchant_id, tx['timestamp'], df_all, flagged_tx_ids, live_observation)
+    
+    if spike_res['severity'] in ['HIGH', 'CRITICAL']:
+        signals = [{
+            "signal_type": "MERCHANT_SPIKE",
+            "risk_score": spike_res.get('spike_score'),
+            "details": spike_res
+        }]
+        
+        process_risk_signals(
+            transaction_id=tx['transaction_id'],
+            as_of_timestamp=tx['timestamp'].isoformat(),
+            signals=signals,
+            account_id=tx.get('account_id'),
+            device_id=tx.get('device_id'),
+            merchant_id=merchant_id,
+            model_version=app_state["metadata"]["model_version"],
+            feature_version="v1"
+        )
+        
+    return score_res

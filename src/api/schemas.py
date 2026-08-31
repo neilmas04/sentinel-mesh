@@ -21,9 +21,30 @@ class HealthResponse(BaseModel):
     status: str
     version: str
 
-class RiskCaseSchema(BaseModel):
+class CaseSignalSchema(BaseModel):
+    signal_id: str
     case_id: str
     transaction_id: str
+    signal_type: str
+    timestamp: datetime
+    risk_score: Optional[float] = None
+    details: Optional[dict] = None
+
+class CaseAuditLogSchema(BaseModel):
+    log_id: str
+    case_id: str
+    timestamp: datetime
+    actor: str
+    event_type: str
+    previous_state: Optional[str] = None
+    new_state: Optional[str] = None
+    reason: Optional[str] = None
+
+class RiskCaseSchema(BaseModel):
+    case_id: str
+    entity_type: str = 'TRANSACTION'
+    entity_id: str
+    transaction_id: Optional[str] = None
     as_of_timestamp: datetime
     risk_score: float
     risk_level: str
@@ -39,6 +60,15 @@ class RiskCaseSchema(BaseModel):
     grounding_result: Optional[dict] = None
     policy_decision: Optional[dict] = None
     failure_reason: Optional[str] = None
+    disposition: Optional[str] = None
+    analyst_notes: Optional[str] = None
+    disposition_timestamp: Optional[datetime] = None
+    analyst_id: Optional[str] = None
+
+class DispositionRequest(BaseModel):
+    disposition: str = Field(..., description="The analyst disposition (e.g., CONFIRMED_ABUSE, FALSE_POSITIVE)")
+    analyst_notes: str = Field(..., description="Notes from the analyst")
+    analyst_id: str = Field(..., description="Identifier of the analyst")
 
 class InvestigationResponse(BaseModel):
     case_id: str
