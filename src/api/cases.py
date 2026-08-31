@@ -4,7 +4,7 @@ from typing import Optional
 
 def process_risk_signals(transaction_id: str, as_of_timestamp: str, signals: list,
                          account_id: str = None, device_id: str = None, merchant_id: str = None,
-                         model_version: str = "v1", feature_version: str = "v1") -> Optional[str]:
+                         model_version: str = "v1", feature_version: str = "v1", is_ai_failure: bool = False) -> Optional[str]:
     """Processes a list of signals and aggregates them into a case if necessary."""
     if not signals:
         return None
@@ -55,7 +55,8 @@ def process_risk_signals(transaction_id: str, as_of_timestamp: str, signals: lis
             triggered_signals=triggered_signals,
             model_version=model_version,
             feature_version=feature_version,
-            transaction_id=transaction_id
+            transaction_id=transaction_id,
+            is_ai_failure=is_ai_failure
         )
         
     # Add all signals to the case

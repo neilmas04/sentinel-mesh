@@ -101,7 +101,7 @@ export default function Dashboard({ liveSimulationContext }) {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <Link to={`/cases/${c.case_id}`} className="text-brand-500 hover:text-brand-400 font-medium">View &rarr;</Link>
+                    <Link to={`/cases/${c.case_id}${c.is_ai_failure ? '?scenario=AI_FAILURE' : ''}`} className="text-brand-500 hover:text-brand-400 font-medium">View &rarr;</Link>
                   </td>
                 </tr>
               ))}

@@ -155,3 +155,31 @@ def test_simulation_normal_scenario(client):
         # Verify no case was created (is_flagged should be False)
         assert data.get("is_flagged", False) == False
         assert data.get("case_id") is None
+
+def test_simulation_ai_failure_scenario(client):
+    # Verify AI_FAILURE simulation sets is_ai_failure=True
+    response = client.post("/api/v1/simulation/step", json={"scenario": "AI_FAILURE"})
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert data.get("is_ai_failure") is True
+    
+    if data.get("case_id"):
+        case_resp = client.get(f"/api/v1/cases/{data['case_id']}")
+        assert case_resp.status_code == 200
+        case_data = case_resp.json()
+        assert case_data.get("is_ai_failure") is True
+
+def test_simulation_coordinated_activity_scenario(client):
+    # Verify COORDINATED_ACTIVITY simulation sets is_ai_failure=False
+    response = client.post("/api/v1/simulation/step", json={"scenario": "COORDINATED_ACTIVITY"})
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert data.get("is_ai_failure") is False
+    
+    if data.get("case_id"):
+        case_resp = client.get(f"/api/v1/cases/{data['case_id']}")
+        assert case_resp.status_code == 200
+        case_data = case_resp.json()
+        assert case_data.get("is_ai_failure") is False

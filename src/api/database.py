@@ -37,18 +37,23 @@ def init_db():
             )
         """)
         
-        # Add new columns to existing table if they don't exist (SQLite doesn't support IF NOT EXISTS for ADD COLUMN, so we catch the error)
-        try:
-            cursor.execute("ALTER TABLE risk_cases ADD COLUMN entity_type TEXT DEFAULT 'TRANSACTION'")
-            cursor.execute("ALTER TABLE risk_cases ADD COLUMN entity_id TEXT")
-            cursor.execute("ALTER TABLE risk_cases ADD COLUMN disposition TEXT")
-            cursor.execute("ALTER TABLE risk_cases ADD COLUMN analyst_notes TEXT")
-            cursor.execute("ALTER TABLE risk_cases ADD COLUMN disposition_timestamp TEXT")
-            cursor.execute("ALTER TABLE risk_cases ADD COLUMN analyst_id TEXT")
-            # For existing rows, set entity_id to transaction_id
-            cursor.execute("UPDATE risk_cases SET entity_id = transaction_id WHERE entity_id IS NULL")
-        except sqlite3.OperationalError:
-            pass # Columns already exist
+        # Add new columns to existing table if they don't exist
+        for col_def in [
+            "entity_type TEXT DEFAULT 'TRANSACTION'",
+            "entity_id TEXT",
+            "disposition TEXT",
+            "analyst_notes TEXT",
+            "disposition_timestamp TEXT",
+            "analyst_id TEXT",
+            "is_ai_failure BOOLEAN DEFAULT 0"
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE risk_cases ADD COLUMN {col_def}")
+            except sqlite3.OperationalError:
+                pass
+                
+        # For existing rows, set entity_id to transaction_id
+        cursor.execute("UPDATE risk_cases SET entity_id = transaction_id WHERE entity_id IS NULL")
             
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS case_signals (
@@ -98,18 +103,18 @@ def get_db():
 
 def create_risk_case(entity_type: str, entity_id: str, as_of_timestamp: str, risk_score: float, 
                      risk_level: str, triggered_signals: list, model_version: str, 
-                     feature_version: str, transaction_id: str = None) -> str:
+                     feature_version: str, transaction_id: str = None, is_ai_failure: bool = False) -> str:
     case_id = f"CASE-{uuid.uuid4().hex[:8].upper()}"
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO risk_cases (
                 case_id, entity_type, entity_id, transaction_id, as_of_timestamp, risk_score, risk_level, 
-                triggered_signals, model_version, feature_version, status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                triggered_signals, model_version, feature_version, status, created_at, is_ai_failure
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             case_id, entity_type, entity_id, transaction_id, as_of_timestamp, risk_score, risk_level,
-            json.dumps(triggered_signals), model_version, feature_version, "OPEN", datetime.now(UTC).isoformat()
+            json.dumps(triggered_signals), model_version, feature_version, "OPEN", datetime.now(UTC).isoformat(), is_ai_failure
         ))
         
         # Add audit log for creation
@@ -234,6 +239,7 @@ def get_risk_case(case_id: str) -> dict:
             result['grounding_result'] = json.loads(result['grounding_result'])
         if result.get('policy_decision'):
             result['policy_decision'] = json.loads(result['policy_decision'])
+        result['is_ai_failure'] = bool(result.get('is_ai_failure', False))
         return result
 
 def find_open_case_for_entity(entity_type: str, entity_id: str, current_timestamp: str, window_hours: int = 24) -> str:
@@ -327,6 +333,7 @@ def get_all_cases(limit: int = 50) -> list[dict]:
                 result['grounding_result'] = json.loads(result['grounding_result'])
             if result.get('policy_decision'):
                 result['policy_decision'] = json.loads(result['policy_decision'])
+            result['is_ai_failure'] = bool(result.get('is_ai_failure', False))
             cases.append(result)
         return cases
 

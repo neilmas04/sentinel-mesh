@@ -5,6 +5,7 @@ from src.api.policy import PolicyDecisionSchema
 
 class ScoreRequest(BaseModel):
     transaction_id: str = Field(..., description="The unique identifier of the transaction to score.")
+    is_ai_failure: Optional[bool] = False
 
 class ScoreResponse(BaseModel):
     transaction_id: str
@@ -16,6 +17,7 @@ class ScoreResponse(BaseModel):
     merchant_id: Optional[str] = None
     as_of_timestamp: Optional[datetime] = None
     is_flagged: Optional[bool] = None
+    is_ai_failure: Optional[bool] = False
 
 class HealthResponse(BaseModel):
     status: str
@@ -64,6 +66,7 @@ class RiskCaseSchema(BaseModel):
     analyst_notes: Optional[str] = None
     disposition_timestamp: Optional[datetime] = None
     analyst_id: Optional[str] = None
+    is_ai_failure: Optional[bool] = False
 
 class DispositionRequest(BaseModel):
     disposition: str = Field(..., description="The analyst disposition (e.g., CONFIRMED_ABUSE, FALSE_POSITIVE)")

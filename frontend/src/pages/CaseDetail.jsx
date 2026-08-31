@@ -180,6 +180,11 @@ export default function CaseDetail() {
                 <p className="text-lg font-mono text-gray-200 mt-1">{risk_score?.toFixed(4)}</p>
               </div>
             </div>
+            {model_version && (
+              <div className="pt-2 border-t border-gray-700/50">
+                <p className="text-[10px] text-gray-500 font-mono">Model: {model_version}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -241,8 +246,25 @@ export default function CaseDetail() {
                 </div>
                 <div className="flex justify-between text-[10px] text-gray-400">
                   <span>{new Date(sig.timestamp).toLocaleString()}</span>
-                  <span>Score: {sig.risk_score?.toFixed(4)}</span>
+                  <span>Score: {sig.risk_score?.toFixed(4) || 'N/A'}</span>
                 </div>
+                {sig.details && (
+                  <div className="mt-2 pt-2 border-t border-gray-700/30 space-y-1">
+                    {sig.details.detector_version && (
+                      <div className="text-[10px] text-gray-400 font-mono">Detector: {sig.details.detector_version}</div>
+                    )}
+                    {sig.details.triggered_signals && sig.details.triggered_signals.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {sig.details.triggered_signals.map(ts => (
+                          <span key={ts} className="text-[9px] bg-gray-700/50 px-1 rounded text-gray-300">{ts}</span>
+                        ))}
+                      </div>
+                    )}
+                    {sig.signal_type === 'MERCHANT_SPIKE' && sig.details.rate_multiplier && (
+                      <div className="text-[10px] text-warning-400">Spike: {sig.details.rate_multiplier.toFixed(1)}x baseline</div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             {signals.length === 0 && <p className="text-sm text-gray-500">No related signals found.</p>}

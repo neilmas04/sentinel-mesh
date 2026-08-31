@@ -160,7 +160,8 @@ async def score_transaction(request: ScoreRequest):
         device_id=current_tx.get('device_id'),
         merchant_id=current_tx.get('merchant_id'),
         model_version=app_state["metadata"]["model_version"],
-        feature_version="v1"
+        feature_version="v1",
+        is_ai_failure=request.is_ai_failure
     )
     
     return ScoreResponse(
@@ -172,7 +173,8 @@ async def score_transaction(request: ScoreRequest):
         created_at=datetime.now(UTC),
         merchant_id=current_tx['merchant_id'],
         as_of_timestamp=current_ts,
-        is_flagged=(risk_level in ["HIGH", "CRITICAL"])
+        is_flagged=(risk_level in ["HIGH", "CRITICAL"]),
+        is_ai_failure=request.is_ai_failure
     )
 
 @app.get("/api/v1/cases", response_model=List[RiskCaseSchema])
@@ -408,7 +410,7 @@ async def simulation_step(req: SimulationStepRequest):
         tx = df_all.sample(n=1).iloc[0]
         
     # We trigger the score endpoint internally
-    score_req = ScoreRequest(transaction_id=tx['transaction_id'])
+    score_req = ScoreRequest(transaction_id=tx['transaction_id'], is_ai_failure=(scenario == "AI_FAILURE"))
     score_res = await score_transaction(score_req)
     
     # Also evaluate Merchant Spike for the transaction's merchant
