@@ -1,110 +1,134 @@
 # Experiments
 
-## M01-DATA-001 — synthetic-world construction
+## M01 — Synthetic Coordinated-Abuse World
+- **Purpose:** Establish a deterministic, leakage-audited dataset foundation for evaluating coordinated abuse detection.
+- **Synthetic Nature:** The dataset is entirely synthetic, simulating organic and fraudulent transactions across a merchant network.
+- **Role:** Serves as a controlled environment to isolate and measure the impact of specific feature families (network, temporal) without the noise and privacy constraints of real-world data.
+- **Separation:** Strictly separated into temporal cohorts: Train, Validation, and Held-out Test. Campaigns never cross cohorts, and entities (accounts, devices, networks) are cohort-disjoint.
 
-- **Purpose:** establish a deterministic, leakage-audited dataset foundation.
-- **Dataset:** `m01-world-v1`, seed `20260824`.
-- **Model:** none; this is not a detection benchmark.
-- **Result:** 46,296 events (2,340 abuse), 45 merchants, 2,700 accounts,
-  2,222 devices, and 1,106 network groups. All 11 leakage/artifact checks
-  passed; a full regeneration produced byte-identical artifacts.
-- **Artifacts:** generation and leakage results are written with the dataset in
-  `manifests/summary.json` and `manifests/leakage_report.json`.
-- **Conclusion:** M01 creates data only. It makes no claim that network or
-  temporal intelligence improves detection.
-- **Next action:** implement and pre-register System A evaluation as M02.
+## M02 — Baseline
+- **Role:** Establishes a scientifically defensible local baseline (System A) using only merchant-local decision-time features.
+- **Results:** Demonstrated that a local-only model can detect some abuse but suffers from slower Time-to-Detection (TTD) and lower recall compared to network-aware models. (See `artifacts/experiments/m02_baseline/metadata.json`).
 
-## M02-EVAL-001 — Leakage-Safe System A Merchant-Local Baseline
+## M03 — Network Detection
+- **Role:** Evaluates the incremental value of cross-merchant network intelligence (System B) over the local baseline.
+- **Results:** Network features (especially Device and Account cross-merchant tracking) dramatically improved F1 and reduced Expected Cost. Confirmed the hypothesis that cross-merchant graph signals improve detection. (See `artifacts/experiments/m03_system_b/metadata.json`).
 
-- **Purpose:** establish a scientifically defensible local baseline against which advanced models can be evaluated.
-- **Dataset:** `m01-world-v1` (train, validation, test cohorts).
-- **Model:** Random Forest selected (over Logistic Regression) based on validation performance.
-- **Threshold:** `0.7303` (selected on the validation set to maximize F1).
-- **Result:**
-  - Precision: 0.752
-  - Recall: 0.614
-  - F1: 0.676
-  - FPR: 0.014
-  - TTD: Detected 8/8 campaigns. Median TTD: 28.67 mins, P95 TTD: 81.99 mins.
-- **Artifacts:** `system_a_model.pkl` and `metadata.json` saved in `artifacts/experiments/m02_baseline`.
-- **Conclusion:** System A is an effective and robust local baseline, but leaves room for improvement, specifically in achieving faster detection times and better recall.
-- **Next action:** implement System B to evaluate the impact of cross-merchant graph features.
+## M04 — Temporal / Robustness
+- **Role:** Evaluates the incremental value of temporal and emerging-risk features (System C) over the network baseline.
+- **Results:** Temporal signals (synchronization and growth rates) cut detection times significantly and reduced expected operational cost. (See `artifacts/experiments/m04_system_c/metadata.json`).
 
-## M03-EVAL-002 — System B: Network-Enhanced Detection
+## M05 / Candidate D
+- **Model Role:** Candidate D is the core Sentinel detector, selected for its optimal balance of speed, coverage, and robustness.
+- **Feature Families:** Combines network synchronization and growth features with the baseline local and network features.
+- **Thresholding:** Uses strict cost-aware thresholding selected on the validation set.
+- **Relationship to Calibration:** Candidate D's raw outputs were later subjected to probability calibration analysis (M13). Note: Calibrated probabilities are **not** used by the PolicyEngine; it relies on the raw scores and deterministic rules.
+- **Relationship to Robustness:** Candidate D was selected during the M04-R robustness evaluation because it maintained perfect campaign coverage even under adversarial low-and-slow attacks, unlike more brittle models.
 
-- **Purpose:** Evaluate the incremental value of cross-merchant network intelligence (System B) over the frozen System A local baseline.
-- **Dataset:** `m01-world-v1` (train, validation, test cohorts).
-- **Model:** Cost-aware Random Forest (Max 5% FPR constraint).
-- **Ablation Results:**
-  - **System A (Local Only):** F1 0.6230, FPR 0.0357, Coverage 1.00, Median TTD 28.67m, Expected Cost $28,680.00
-  - **System B (Local + Device):** F1 0.7823, FPR 0.0188, Coverage 1.00, Median TTD 26.77m, Expected Cost $16,500.00
-  - **System B (Local + Network Group):** F1 0.5117, FPR 0.0182, Coverage 1.00, Median TTD 15.03m, Expected Cost $46,230.00
-  - **System B (Local + Account):** F1 0.7475, FPR 0.0328, Coverage 1.00, Median TTD 17.88m, Expected Cost $13,260.00
-  - **System B (Local + All Network):** F1 0.7924, FPR 0.0179, Coverage 0.88, Median TTD 19.30m, Expected Cost $15,700.00
-- **System A vs System B (All Network) Comparison:**
-  - **F1:** +0.1694 (+27.2%)
-  - **FPR:** -0.0178 (-49.9%)
-  - **Coverage:** -0.12 (-12.0%)
-  - **Median TTD:** -9.37m (-32.7%)
-  - **Expected Cost:** -$12,980.00 (-45.3%)
-- **Artifacts:** `system_b_model.pkl` and `metadata.json` saved in `artifacts/experiments/m03_system_b`.
-- **Conclusion:** Network features (especially Device and Account cross-merchant tracking) dramatically improve F1 (0.62 -> 0.79) and reduce Expected Cost by 45%. However, Network Group features alone were noisy, and the full feature set slightly reduced absolute coverage (1.00 -> 0.88) due to strict thresholding on some campaigns. The results confirm the primary hypothesis that cross-merchant graph signals improve detection and reduce TTD.
-- **Next action:** Implement M04 (System C).
+## M11 — Merchant Spike Timeline
+- **Bucket-Level Baseline:** Maintains historical transaction volume baselines for merchants.
+- **Live Bucket:** Compares live transaction volume against the historical baseline.
+- **Timeline Visualization:** Provides a visual representation of the spike timeline in the frontend dashboard.
+- **Insufficient-History Behavior:** Gracefully handles merchants with insufficient history by suppressing spike alerts until a baseline is established.
+- **Integration:** HIGH or CRITICAL spike events are integrated into the deterministic case aggregation pipeline as case signals.
 
-## M04-EVAL-003 — System C: Temporal & Emerging-Risk Detection
+## M12 — External Transaction-Level Benchmark
+- **Dataset:** Kaggle ULB Credit Card Fraud Detection.
+- **Rows:** 284,807
+- **Fraud Count:** 492
+- **Temporal Split:**
+  - Train: 182,276
+  - Validation: 45,569
+  - Test: 56,962
+- **Threshold Selection:** Validation-only threshold selection (Selected threshold = 0.7511).
+- **Results (Test Set):**
+  - PR-AUC: 0.7958
+  - Precision: 0.8250
+  - Recall: 0.8148
+  - F1: 0.8199
+  - False Positives: 14
+  - False Negatives: 15
+  - Normalized Cost: $8,900 (under the explicitly stated Sentinel Mesh benchmark assumption)
+  - Benchmark-specific cost: $3,736.05 (under the explicitly stated transaction-amount assumption)
+- **Important Note:** This evaluates a transaction-level benchmark model and does **NOT** validate Candidate D's network/temporal coordinated-abuse capability. The features and data differ significantly from M01.
+- **Reference:** `artifacts/experiments/m12_external_benchmark/benchmark_report.md`
 
-- **Purpose:** Evaluate the incremental value of temporal and emerging-risk features over the frozen System A and System B baselines.
-- **Dataset:** `m01-world-v1` (train, validation, test cohorts).
-- **Model:** Cost-aware Random Forest (Max 5% FPR constraint).
-- **Ablation Results:**
-  - **System A (Local Only):** F1 0.6230, FPR 0.0357, Coverage 1.00, Median TTD 28.67m, Expected Cost $28,680.00
-  - **System B (All Network):** F1 0.7924, FPR 0.0179, Coverage 0.88, Median TTD 19.30m, Expected Cost $15,700.00
-  - **System B* (Local + Device + Account):** F1 0.8113, FPR 0.0241, Coverage 1.00, Median TTD 17.88m, Expected Cost $9,090.00
-  - **System C (B* + Rolling):** F1 0.8007, FPR 0.0274, Coverage 1.00, Median TTD 15.51m, Expected Cost $8,560.00
-  - **System C (B* + Growth):** F1 0.9046, FPR 0.0114, Coverage 0.75, Median TTD 2.68m, Expected Cost $4,370.00
-  - **System C (B* + Synchronization):** F1 0.8722, FPR 0.0135, Coverage 1.00, Median TTD 5.63m, Expected Cost $7,510.00
-  - **System C (B* + All Temporal):** F1 0.9102, FPR 0.0084, Coverage 0.88, Median TTD 2.76m, Expected Cost $5,940.00
-  - **System C (All Network + All Temporal):** F1 0.9422, FPR 0.0039, Coverage 0.88, Median TTD 2.76m, Expected Cost $5,040.00
-- **System A vs Best System C (All Network + All Temporal) Comparison:**
-  - **F1:** +0.3192 (+51.2%)
-  - **FPR:** -0.0318 (-89.1%)
-  - **Coverage:** -0.12 (-12.0%)
-  - **Median TTD:** -25.91m (-90.4%)
-  - **Expected Cost:** -$23,640.00 (-82.4%)
-- **System B (All Network) vs System C (All Network + All Temporal) Comparison:**
-  - **F1:** +0.1498 (+18.9%)
-  - **FPR:** -0.0140 (-78.2%)
-  - **Coverage:** No change (0.88)
-  - **Median TTD:** -16.54m (-85.7%)
-  - **Expected Cost:** -$10,660.00 (-67.9%)
-- **Coverage Analysis:** The addition of temporal features (specifically Growth) drops coverage significantly (from 1.0 to 0.75 in the B* + Growth ablation). Synchronization, on the other hand, preserves 1.00 coverage (B* + Sync) while dropping TTD from 17.88m to 5.63m. The full System C model does not recover the 12% coverage lost in the full System B. Instead, it holds at 0.88, indicating that certain campaigns are still missed by strict thresholds when using these broad features.
-- **Artifacts:** `system_c_model.pkl` and `metadata.json` saved in `artifacts/experiments/m04_system_c`.
-- **Conclusion:** Temporal signals provide monumental value. Adding temporal synchronization and growth rates to the existing network graph cuts detection times by ~90% and reduces expected operational cost by over 80%. Synchronization features are particularly effective at accelerating detection without sacrificing coverage.
-- **Next action:** Implement M04-R (Robustness Evaluation).
+## M13 — Probability Calibration
+Documenting the completed leakage-safe calibration protocol.
+- **Methods:** Isotonic Regression, Sigmoid / Platt Scaling.
+- **Protocol:**
+  - 5-fold CV on validation split only for method selection.
+  - Selected method fitted on full validation set.
+  - Frozen before test evaluation.
+  - Test labels never used for fitting or method selection.
 
-## M04-R-EVAL-004 — Robustness & Generalization Evaluation
+**Candidate D:**
+- CV Brier Isotonic = 0.005604
+- CV Brier Sigmoid = 0.005621
+- Selected = Isotonic
+- Test raw Brier = 0.010454
+- Test calibrated Brier = 0.011194 (Note: Calibrated TEST Brier is slightly worse than raw Brier)
+- Test raw ECE = 0.022229
+- Test calibrated ECE = 0.010040 (ECE improves)
 
-- **Purpose:** Evaluate whether the strongest M04 System C temporal detection models generalize to adversarial variations of coordinated behavior (timing jitter, low-and-slow execution, varied amounts).
-- **Dataset:** `m01-world-v1` perturbed variants (Jitter, Low-and-Slow, Amount).
-- **Model:** Frozen M04 cost-aware models.
-- **Ablation Candidates:**
-  - **A:** All Network + All Temporal
-  - **B:** B* + Synchronization
-  - **C:** B* + Growth
-  - **D:** B* + Synchronization + Growth (New Candidate)
-- **Robustness Results (Degradation from Baseline):**
-  - **Candidate A:** Baseline F1 0.9422 (Cov 0.88). Under Jitter: F1 0.9340 (-0.0082). Under Low & Slow: F1 0.7769 (-0.1654).
-  - **Candidate B:** Baseline F1 0.8722 (Cov 1.00, TTD 5.6m). Under Jitter: F1 0.8634 (-0.0088). Under Low & Slow: F1 0.7672 (-0.1050).
-  - **Candidate C:** Baseline F1 0.9046 (Cov 0.75, TTD 2.6m). Under Jitter: F1 0.9025 (-0.0021). Under Low & Slow: F1 0.8545 (-0.0501).
-  - **Candidate D:** Baseline F1 0.8837 (Cov 1.00, TTD 3.6m). Under Jitter: F1 0.8745 (-0.0092). Under Low & Slow: F1 0.7927 (-0.0910).
-- **Analysis:**
-  - All candidates are extremely robust to Amount variation (zero degradation) and highly robust to Timing Jitter (less than 0.01 drop in F1).
-  - The primary failure mode is **Low-and-Slow** execution. Candidate A suffers a massive -0.165 F1 drop, and Candidate B drops -0.105. 
-  - **Candidate D (B* + Sync + Growth)** is the optimal balanced detector. It successfully combines the speed of Growth features (bringing TTD down to 3.6 mins) with the stability of Synchronization features, preventing the severe coverage collapse (0.75) seen in Candidate C. Candidate D maintains a perfect 1.00 coverage across all scenarios, even while taking a moderate hit to F1 during low-and-slow attacks.
-- **Conclusion:** Candidate D is the recommended core Sentinel detector. While the strict All Network + All Temporal (Candidate A) achieved the highest theoretical F1 in M04, it is highly brittle to low-and-slow evasion and misses 12% of campaigns. Candidate D maximizes coverage and speed while maintaining robust F1 generalization.
-- **Next action:** Implement M05 (Agentic Feedback / Server-side Scoring).
+**External Benchmark:**
+- CV Brier Isotonic = 0.000397
+- CV Brier Sigmoid = 0.000482
+- Selected = Isotonic
+- Test raw Brier = 0.009653
+- Test calibrated Brier = 0.000430
+- Test raw ECE = 0.080568
+- Test calibrated ECE = 0.000202
 
+**Important Note:** Calibration is an analytical experiment. It is **not** exposed to or used by the PolicyEngine, and it is not a proof of real-world probability validity.
 
-## M08 Policy Simulation
-- Synthetic economic model established: loss_severity_factor=1.0, fp_cost_rate=0.05, manual_review_cost=5.0.
-- **Important Note**: These are synthetic evaluation assumptions and do not represent real Razorpay economics. Policy determinism verified via 	ests/test_m08_policy.py proving action bounding beyond AI recommendations.
+## M14 — Adversarial Robustness
+Documenting the full robustness methodology against synthetic perturbations.
+- **Attack Families:** Timing jitter, low-and-slow, merchant hopping, device rotation, account rotation, fragmented bursts.
+- **Pre-improvement findings:**
+  - Clean F1 = 0.8837
+  - Clean TTD = 3.63 min
+  - Low-and-Slow 24x F1 = 0.4123
+  - Low-and-Slow 24x TTD = 247.0 min
+  - Largest TTD degradation = +243.4 min
+  - Largest cost increase = +$50,800
+- **Root Cause:** Short-term temporal/local velocity signals collapse under low-and-slow attacks, while longer-horizon network/growth signals remain informative. Eventual campaign detection remains high despite poor early transaction-level detection.
+- **Early Warning:**
+  - Version = `early_warning_v1`
+  - Validation-selected OR rule: `network_device_accounts_24h > 5.0` OR `temporal_device_new_accounts_1h > 1.0`
+  - Target validation FPR <= 0.5%
+- **Post-improvement:**
+  - 24x TTD: 247.0 min → 116.2 min (Improvement = 130.8 min)
+  - 10x TTD: 67.6 min → 26.1 min (Improvement = 41.5 min)
+  - Clean incremental FPs = approximately +14 to +15 depending on evaluation context.
+  - No observed TTD/campaign-coverage regressions across the tested full grid.
+- **Important Note:** The Early Warning detector is parallel to Candidate D, causal, and investigation-oriented. It is **not** an autonomous blocking mechanism. Robustness results come from synthetic perturbations and do not establish robustness to all real-world attacks.
+
+## M15 — Alert Aggregation / Analyst Workflow
+- **Deterministic Grouping:** Entity + temporal grouping of signals.
+- **Grouping Window:** 24-hour rolling window.
+- **Parent Case:** Signals are aggregated into a parent case.
+- **Case Signals:** Individual alerts (Candidate D, Early Warning, Merchant Spike) are attached as `case_signals`.
+- **Duplicate Protection:** Duplicate signals for the same entity within the window are merged.
+- **Aggregation:** Integrates Early Warning, Candidate D, and Merchant Spike signals.
+- **Analyst Workflow:** Supports analyst disposition and maintains an immutable audit log.
+- **AI Failure:** Preserves context and degrades gracefully to deterministic rules if the AI fails.
+- **Browser Verification:** Key case flows verified via browser E2E tests.
+
+## RESULT INTERPRETATION
+**How to Interpret the Evidence**
+Clearly distinguish the following aspects of the evaluation:
+1. **Simulated coordinated-abuse capability:** Evaluated in M01-M04 using synthetic data.
+2. **Transaction-level external benchmark capability:** Evaluated in M12 using a real-world, but non-network, dataset.
+3. **Probability calibration analysis:** An offline analytical experiment (M13).
+4. **Synthetic adversarial robustness:** Evaluated in M14 using synthetic perturbations of the M01 dataset.
+5. **Production-oriented case workflow:** The runtime aggregation and investigation pipeline (M15).
+Do not combine these distinct evaluations into one aggregate accuracy claim.
+
+## TRACEABILITY
+- M02 Baseline Results: `artifacts/experiments/m02_baseline/metadata.json`
+- M03 Network Results: `artifacts/experiments/m03_system_b/metadata.json`
+- M04 Temporal Results: `artifacts/experiments/m04_system_c/metadata.json`
+- M12 Benchmark Results: `artifacts/experiments/m12_external_benchmark/benchmark_report.md`
+- M13 Calibration Results: `artifacts/experiments/m13_calibration/`
+- M14 Robustness Results: `artifacts/experiments/m14_robustness/`
