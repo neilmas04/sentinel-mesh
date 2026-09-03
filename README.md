@@ -89,17 +89,32 @@ npm run build
 - **Robustness:** Synthetic adversarial perturbations (jitter, low-and-slow) to test model generalization.
 Detailed evaluation reports and artifacts are available in the `docs/` and `artifacts/` directories.
 
-## 9. Security / Data Handling
+## 9. Data Sources
+
+### External Benchmark Dataset
+The external fraud-detection benchmark uses the publicly available Kaggle Credit Card Fraud Detection dataset from the Machine Learning Group at Université de Libre de Bruxelles (ULB).
+
+https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
+
+- Dataset: Credit Card Fraud Detection
+- Source: Kaggle / Machine Learning Group (ULB)
+- Size: 284,807 transactions
+- Fraud cases: 492
+- Features: Time, Amount, V1-V28, and Class
+
+This dataset is used only for the isolated external benchmark evaluation and does NOT directly validate Sentinel Mesh's Candidate D network/temporal feature pipeline.
+
+## 10. Security / Data Handling
 - `.env` is ignored by Git to prevent leaking secrets.
 - `sentinel.db` (the local SQLite database) is ignored.
 - External benchmark datasets are ignored.
 - Generated data and experiment artifacts in `data/` and `artifacts/` are not committed.
 - There are no real credentials or PII in the repository.
 
-## 10. Limitations
+## 11. Limitations
 The system operates on synthetic data and has specific constraints regarding its evaluation and real-world applicability. For a full list of limitations, see [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
-## 11. Repository Structure
+## 12. Repository Structure
 ```text
 sentinel-mesh/
 ├── .env.example
