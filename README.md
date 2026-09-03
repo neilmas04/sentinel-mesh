@@ -56,20 +56,7 @@ cp .env.example .env
 Edit `.env` and insert your `GOOGLE_API_KEY`.
 **Important:** Never commit your `.env` file. It contains sensitive keys and is ignored by Git.
 
-## 6. Running the Demo
-The platform includes a frontend dashboard to visualize the risk operations workflow. The main UI flow is:
-1. **Dashboard:** View active cases and system status.
-2. **Normal Traffic:** Run a benign synthetic demo scenario to observe baseline behavior.
-3. **Emerging Cluster:** Run a scenario simulating coordinated abuse.
-4. **Risk Case:** Open the generated high-risk case from the dashboard.
-5. **Related Signals:** Review the individual signals that were aggregated into the case.
-6. **Network Evidence Graph:** Explore the visual graph of connected entities.
-7. **Start Investigation:** Trigger the AI agent to analyze the evidence.
-8. **Evidence:** Review the structured dossier and grounded claims produced by the AI.
-9. **AI Failure fallback:** Simulate an AI failure to observe the deterministic fallback mode.
-10. **Evaluation:** View offline evaluation metrics and benchmark results.
-
-## 7. Testing
+## 6. Testing
 To run the backend deterministic tests:
 ```powershell
 .\venv\Scripts\python -m pytest
@@ -81,7 +68,7 @@ cd frontend
 npm run build
 ```
 
-## 8. Evaluation
+## 7. Evaluation
 - **M01:** Deterministic generation of a synthetic world dataset with organic and fraudulent transactions.
 - **Candidate D:** The optimal balanced detector identified in M04-R, combining network synchronization and growth features.
 - **External Benchmark:** Evaluates the transaction-level capability of the models on external datasets.
@@ -89,7 +76,7 @@ npm run build
 - **Robustness:** Synthetic adversarial perturbations (jitter, low-and-slow) to test model generalization.
 Detailed evaluation reports and artifacts are available in the `docs/` and `artifacts/` directories.
 
-## 9. Data Sources
+## 8. Data Sources
 
 ### External Benchmark Dataset
 The external fraud-detection benchmark uses the publicly available Kaggle Credit Card Fraud Detection dataset from the Machine Learning Group at Université de Libre de Bruxelles (ULB).
@@ -104,17 +91,17 @@ https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 
 This dataset is used only for the isolated external benchmark evaluation and does NOT directly validate Sentinel Mesh's Candidate D network/temporal feature pipeline.
 
-## 10. Security / Data Handling
+## 9. Security / Data Handling
 - `.env` is ignored by Git to prevent leaking secrets.
 - `sentinel.db` (the local SQLite database) is ignored.
 - External benchmark datasets are ignored.
 - Generated data and experiment artifacts in `data/` and `artifacts/` are not committed.
 - There are no real credentials or PII in the repository.
 
-## 11. Limitations
+## 10. Limitations
 The system operates on synthetic data and has specific constraints regarding its evaluation and real-world applicability. For a full list of limitations, see [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
-## 12. Repository Structure
+## 11. Repository Structure
 ```text
 sentinel-mesh/
 ├── .env.example
