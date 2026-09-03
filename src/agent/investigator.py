@@ -88,7 +88,7 @@ class RiskInvestigator:
                     import re
                     
                     # A. Dates
-                    timestamp_pattern = r'\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?'
+                    timestamp_pattern = r'\d{4}-\d{2}-\d{2}(?:(?:[tT]|\s+at\s+|\s+)\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[zZ]|[+-]\d{2}:?\d{2})?)?'
                     claim_dates = re.findall(timestamp_pattern, claim_text)
                     text_no_dates = re.sub(timestamp_pattern, '', claim_text)
                     
@@ -129,7 +129,8 @@ class RiskInvestigator:
                             failed_reasons.append(f"Int {ci} not matched in {eid} fields: {list(search_fields)}")
                             
                     for cd in claim_dates:
-                        matched = any(isinstance(v, str) and cd in v.lower() for f, v in expected_values)
+                        cd_norm = re.sub(r'[^\d]', '', cd)
+                        matched = any(isinstance(v, str) and cd_norm in re.sub(r'[^\d]', '', v) for f, v in expected_values)
                         if not matched:
                             grounding_status = 'UNSUPPORTED'
                             failed_reasons.append(f"Date {cd} not matched in {eid}")

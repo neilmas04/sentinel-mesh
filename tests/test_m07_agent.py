@@ -184,3 +184,54 @@ def test_grounding_composite_transaction_claim():
     )
     result = investigator._grounding_validator(dossier, evidence_bundle)
     assert result["facts"][0]["grounding_status"] == "SUPPORTED"
+
+def test_grounding_timestamp_natural_language_at():
+    investigator = RiskInvestigator(None)
+    evidence_bundle = [{"evidence_id": "E1", "observation": {"timestamp": "2026-01-28T06:18:56.762775"}}]
+    dossier = DossierSchema(
+        facts=[Claim(claim="occurring on 2026-01-28 at 06:18:56.762775", type="FACT", evidence_ids=["E1"])],
+        inferences=[], unknowns=[], risk_assessment=".", recommended_next_step="."
+    )
+    result = investigator._grounding_validator(dossier, evidence_bundle)
+    assert result["facts"][0]["grounding_status"] == "SUPPORTED"
+
+def test_grounding_timestamp_t_format():
+    investigator = RiskInvestigator(None)
+    evidence_bundle = [{"evidence_id": "E1", "observation": {"timestamp": "2026-01-28T06:18:56.762775"}}]
+    dossier = DossierSchema(
+        facts=[Claim(claim="timestamp 2026-01-28T06:18:56.762775", type="FACT", evidence_ids=["E1"])],
+        inferences=[], unknowns=[], risk_assessment=".", recommended_next_step="."
+    )
+    result = investigator._grounding_validator(dossier, evidence_bundle)
+    assert result["facts"][0]["grounding_status"] == "SUPPORTED"
+
+def test_grounding_timestamp_space_format():
+    investigator = RiskInvestigator(None)
+    evidence_bundle = [{"evidence_id": "E1", "observation": {"timestamp": "2026-01-28T06:18:56.762775"}}]
+    dossier = DossierSchema(
+        facts=[Claim(claim="timestamp 2026-01-28 06:18:56.762775", type="FACT", evidence_ids=["E1"])],
+        inferences=[], unknowns=[], risk_assessment=".", recommended_next_step="."
+    )
+    result = investigator._grounding_validator(dossier, evidence_bundle)
+    assert result["facts"][0]["grounding_status"] == "SUPPORTED"
+
+def test_grounding_mismatched_numeric_fact():
+    investigator = RiskInvestigator(None)
+    evidence_bundle = [{"evidence_id": "E1", "observation": {"timestamp": "2026-01-28T06:18:56.762775", "amount": 100.0}}]
+    dossier = DossierSchema(
+        facts=[Claim(claim="occurring on 2026-01-28 at 06:18:56.762775 with amount 56.76", type="FACT", evidence_ids=["E1"])],
+        inferences=[], unknowns=[], risk_assessment=".", recommended_next_step="."
+    )
+    result = investigator._grounding_validator(dossier, evidence_bundle)
+    assert result["facts"][0]["grounding_status"] == "UNSUPPORTED"
+
+def test_grounding_inference_claim_unverifiable():
+    investigator = RiskInvestigator(None)
+    evidence_bundle = [{"evidence_id": "E1", "observation": {"timestamp": "2026-01-28T06:18:56.762775"}}]
+    dossier = DossierSchema(
+        facts=[],
+        inferences=[Claim(claim="occurring on 2026-01-28 at 06:18:56.762775", type="INFERENCE", evidence_ids=["E1"])],
+        unknowns=[], risk_assessment=".", recommended_next_step="."
+    )
+    result = investigator._grounding_validator(dossier, evidence_bundle)
+    assert result["inferences"][0]["grounding_status"] == "UNVERIFIABLE"

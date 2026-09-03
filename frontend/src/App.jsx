@@ -4,6 +4,7 @@ import { LayoutDashboard, ShieldAlert, BarChart3, Activity } from 'lucide-react'
 import Dashboard from './pages/Dashboard';
 import CaseDetail from './pages/CaseDetail';
 import Evaluation from './pages/Evaluation';
+import RiskCases from './pages/RiskCases';
 import SimulationControls from './components/SimulationControls';
 
 function Sidebar({ onSimulationComplete }) {
@@ -53,7 +54,7 @@ function App() {
         <main className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
           <Routes>
             <Route path="/" element={<Dashboard liveSimulationContext={liveSimulationContext} />} />
-            <Route path="/cases" element={<Dashboard liveSimulationContext={liveSimulationContext} />} />
+            <Route path="/cases" element={<RiskCases />} />
             <Route path="/cases/:caseId" element={<CaseDetail />} />
             <Route path="/evaluation" element={<Evaluation />} />
           </Routes>
