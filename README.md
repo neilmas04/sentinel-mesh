@@ -115,3 +115,41 @@ sentinel-mesh/
 ├── src/                # Backend source code (API, Agent, Models, Simulation)
 └── tests/              # Pytest test suite
 ```
+
+## Tech Stack
+
+### Frontend
+- React
+- Vite
+- JavaScript / JSX
+- CSS
+
+### Backend
+- Python
+- FastAPI
+- Uvicorn
+- Pydantic
+
+### Machine Learning
+- Scikit-learn
+- Pandas
+- NumPy
+
+### Database
+- SQLite
+- Python sqlite3
+
+### AI Investigation
+- Google Gemini API
+- Deterministic fallback when AI is unavailable
+
+### Data and Evaluation
+- Synthetic transaction data for the controlled environment
+- Kaggle Credit Card Fraud Detection dataset for the external benchmark
+- PR-AUC, Precision, Recall, F1, Brier Score, ECE, Time-to-Detection (TTD), and cost analysis
+
+### Development
+- Git
+- GitHub
+- Python virtual environment
+- PowerShell
