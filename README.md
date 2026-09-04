@@ -66,50 +66,7 @@ Sentinel Mesh models fraud detection as a comprehensive risk-operations workflow
 
 ## 4. System Architecture
 
-```mermaid
-flowchart TD
-    subgraph Runtime Pipeline
-        TE[Transaction/Event] --> FE[Feature Engineering]
-        FE --> CD[Candidate D]
-        FE --> EW[Early Warning]
-        FE --> MS[Merchant Spike]
-        
-        CD --> SA[Signal Aggregation]
-        EW --> SA
-        MS --> SA
-        
-        SA --> RC[Risk Case]
-        
-        RC --> NE[Network Evidence]
-        RC --> RP[Risk Profile]
-        RC --> AL[Audit Log]
-        
-        NE --> AI_INV[AI Investigation]
-        RP --> AI_INV
-        
-        AI_INV --> AI_CHECK{AI Available?}
-        
-        AI_CHECK -- Yes --> GID[Grounded Investigation Dossier]
-        AI_CHECK -- No --> DF[Deterministic Fallback]
-        
-        GID --> AD[Analyst Disposition]
-        DF --> AD
-        
-        AD --> PE[Policy Engine]
-        
-        PE --> CH[Case History / Audit Trail]
-        AL --> CH
-    end
-
-    subgraph Evaluation Pipeline
-        OE[Offline Evaluation]
-        OE --> EP_M01[M01 / Candidate D]
-        OE --> EP_EB[External Benchmark]
-        OE --> EP_CAL[Calibration]
-        OE --> EP_AR[Adversarial Robustness]
-        OE --> EP_EW[Early Warning Evaluation]
-    end
-```
+![Sentinel Mesh System Architecture](docs/sentinel-mesh-architecture.png)
 
 ## 5. Core Capabilities
 - **Candidate D transaction risk scoring:** The core detection model balancing speed and coverage.
