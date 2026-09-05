@@ -108,8 +108,7 @@ python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 Open a new PowerShell terminal and run:
 ```powershell
 cd sentinel-mesh\frontend
-npm install
-npm run dev
+& "D:\npm.cmd" run dev
 ```
 *(Note: Depending on your Windows environment, you may need to invoke `npm run dev` through the actual npm executable, e.g., `& "C:\Program Files\nodejs\npm.cmd" run dev`)*
 
